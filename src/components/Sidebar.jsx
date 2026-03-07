@@ -1,7 +1,18 @@
-export default function Sidebar() {
+export default function Sidebar({ onClose }) {
   return (
     <aside className="w-full h-full bg-gray-900 text-white p-6 flex flex-col gap-4 overflow-y-auto">
-      <h1 className="text-2xl font-bold tracking-tight">MunchMap</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">MunchMap</h1>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white text-xl leading-none cursor-pointer"
+            aria-label="Close menu"
+          >
+            ✕
+          </button>
+        )}
+      </div>
       <hr className="border-gray-700" />
 
       <h2 className="text-lg font-semibold text-gray-300">Options</h2>
