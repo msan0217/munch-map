@@ -12,13 +12,13 @@ function App() {
       <div className="relative w-screen h-screen md:hidden">
         <MapView restaurants={restaurantData.restaurants} />
 
-        {/* Bottom sheet bar */}
+        {/* Top bar */}
         <div
-          className="absolute bottom-0 left-0 right-0 bg-gray-900 text-white px-4 py-3 flex items-center gap-2 cursor-pointer"
+          className="absolute top-0 left-0 right-0 bg-gray-900 text-white px-4 py-3 flex items-center justify-between cursor-pointer"
           onClick={() => setMobileMenuOpen(true)}
         >
-          <span className="text-lg leading-none">☰</span>
-          <span className="text-sm font-medium">Options</span>
+          <span className="text-xl leading-none">☰</span>
+          <span className="text-base font-bold tracking-tight">MunchMap</span>
         </div>
 
         {/* Full-screen menu overlay */}
