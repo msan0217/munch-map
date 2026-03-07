@@ -27,8 +27,11 @@ function createCalloutElement(restaurant) {
   el.appendChild(meta)
 
   if (restaurant.address) {
-    const addr = document.createElement('div')
-    addr.style.cssText = 'font-size: 11px; color: #777; margin-bottom: 6px;'
+    const addr = document.createElement('a')
+    addr.href = `https://maps.apple.com/?ll=${restaurant.latitude},${restaurant.longitude}&q=${encodeURIComponent(restaurant.name)}`
+    addr.target = '_blank'
+    addr.rel = 'noopener noreferrer'
+    addr.style.cssText = 'font-size: 11px; color: #777; margin-bottom: 6px; display: block; text-decoration: none;'
     addr.textContent = restaurant.address
     el.appendChild(addr)
   }
