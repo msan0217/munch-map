@@ -13,7 +13,7 @@ function zoomToSpan(zoom) {
 
 function createCalloutElement(restaurant) {
   const el = document.createElement('div')
-  el.style.cssText = 'font-family: system-ui, sans-serif; min-width: 200px; max-width: 280px; padding: 8px;'
+  el.style.cssText = 'font-family: system-ui, sans-serif; min-width: 200px; max-width: 280px; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);'
 
   const name = document.createElement('div')
   name.style.cssText = 'font-weight: 600; font-size: 14px; margin-bottom: 4px;'
