@@ -1,5 +1,6 @@
 import Sidebar from './components/Sidebar'
 import MapView from './components/MapView'
+import restaurantData from './data/restaurants.json'
 
 function App() {
   return (
@@ -11,7 +12,7 @@ function App() {
 
       {/* Map fills remaining space */}
       <div className="hidden md:block flex-1">
-        <MapView />
+        <MapView restaurants={restaurantData.restaurants} />
       </div>
     </div>
   )
