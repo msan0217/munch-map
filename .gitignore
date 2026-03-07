@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Apple MapKit private key — never commit
+*.p8
+
 # Environment variables — never commit secrets
 .env
 .env.local
