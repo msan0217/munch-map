@@ -29,7 +29,10 @@ function App() {
           onClick={() => setMobileMenuOpen(true)}
         >
           <span className="text-xl leading-none">☰</span>
-          <span className="text-base font-bold tracking-tight">MunchMap</span>
+          <div className="flex items-center gap-2">
+            <img src="/monch.jpeg" alt="MunchMap logo" className="w-6 h-6 rounded-full object-cover object-top" />
+            <span className="text-base font-bold tracking-tight">MunchMap</span>
+          </div>
         </div>
 
         {/* Full-screen menu overlay */}
