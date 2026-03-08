@@ -2,7 +2,10 @@ export default function Sidebar({ onClose }) {
   return (
     <aside className="w-full h-full bg-gray-900 text-white p-6 flex flex-col gap-4 overflow-y-auto">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">MunchMap</h1>
+        <div className="flex items-center gap-2">
+          <img src="/monch.jpeg" alt="MunchMap logo" className="w-8 h-8 rounded-full object-cover object-top" />
+          <h1 className="text-2xl font-bold tracking-tight">MunchMap</h1>
+        </div>
         {onClose && (
           <button
             onClick={onClose}
