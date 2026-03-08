@@ -1,28 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { AUSTIN_CENTER, AUSTIN_RADIUS_KM } from '../config/austin.js'
+import { COLORS, GOOGLE_GLYPH, MICHELIN_STYLES } from '../config/markerStyles.js'
 
 const MAPKIT_TOKEN = import.meta.env.VITE_MAPKIT_TOKEN
 
 const DEFAULT_CENTER = { latitude: AUSTIN_CENTER.lat, longitude: AUSTIN_CENTER.lng }
 const DEFAULT_ZOOM_LEVEL = 10
-
-// --- Layer color palette ---
-const COLORS = {
-  google: '#FF6B6B',
-  michelinStar: '#D4A017',
-  michelinBib: '#E8711A',
-  michelinSelected: '#6B7280',
-  dual: '#8B5CF6',
-}
-
-// Michelin distinction config
-const MICHELIN_STYLES = {
-  '1 Star': { color: COLORS.michelinStar, glyph: '★', label: '1 Star' },
-  '2 Stars': { color: COLORS.michelinStar, glyph: '★★', label: '2 Stars' },
-  '3 Stars': { color: COLORS.michelinStar, glyph: '★★★', label: '3 Stars' },
-  'Bib Gourmand': { color: COLORS.michelinBib, glyph: '𝐁', label: 'Bib Gourmand' },
-  'Selected': { color: COLORS.michelinSelected, glyph: '◆', label: 'Selected' },
-}
 
 // --- SVG glyph images for dual-source markers ---
 // Creates an SVG with two icons stacked vertically inside the balloon pin
@@ -37,7 +20,7 @@ function dualGlyphImage(michelinGlyph) {
     <line x1="4" y1="14" x2="24" y2="14" stroke="rgba(255,255,255,0.35)" stroke-width="0.75"/>
     <text x="14" y="21" text-anchor="middle" dominant-baseline="central"
       fill="white" font-family="-apple-system,system-ui,sans-serif"
-      font-size="11" font-weight="600">🍴</text>
+      font-size="11" font-weight="600">${GOOGLE_GLYPH}</text>
   </svg>`
   const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
   const img = { 1: url, 2: url, 3: url }
@@ -288,7 +271,7 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
         sourceType = 'michelin'
       } else {
         color = COLORS.google
-        glyphText = '🍴'
+        glyphText = GOOGLE_GLYPH
         sourceType = 'google'
       }
 

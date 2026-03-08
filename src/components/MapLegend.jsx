@@ -1,10 +1,4 @@
-const LEGEND_ITEMS = [
-  { glyph: '🍴', color: '#FF6B6B', label: 'Google Top-Rated' },
-  { glyph: '★', color: '#D4A017', label: 'Michelin Star' },
-  { glyph: '𝐁', color: '#E8711A', label: 'Bib Gourmand' },
-  { glyph: '◆', color: '#6B7280', label: 'Michelin Selected' },
-  { glyph: '★ 🍴', color: '#8B5CF6', label: 'Both Sources' },
-]
+import { LEGEND_ITEMS } from '../config/markerStyles.js'
 
 function PinIcon({ color, glyph }) {
   return (
