@@ -1,25 +1,40 @@
 const LEGEND_ITEMS = [
-  { glyph: '🍴', color: '#FF6B6B', bg: '#FFF0F0', label: 'Google Top-Rated' },
-  { glyph: '★', color: '#D4A017', bg: '#FFF8E1', label: 'Michelin Star' },
-  { glyph: '𝐁', color: '#E8711A', bg: '#FFF3E8', label: 'Bib Gourmand' },
-  { glyph: '◆', color: '#6B7280', bg: '#F3F4F6', label: 'Michelin Selected' },
+  { glyph: '🍴', color: '#FF6B6B', label: 'Google Top-Rated' },
+  { glyph: '★', color: '#D4A017', label: 'Michelin Star' },
+  { glyph: '𝐁', color: '#E8711A', label: 'Bib Gourmand' },
+  { glyph: '◆', color: '#6B7280', label: 'Michelin Selected' },
+  { glyph: '★ 🍴', color: '#8B5CF6', label: 'Both Sources' },
 ]
+
+function PinIcon({ color, glyph }) {
+  return (
+    <svg width="18" height="24" viewBox="0 0 18 24" className="shrink-0">
+      <path
+        d="M9 0C4.03 0 0 3.58 0 8c0 5.25 9 16 9 16s9-10.75 9-16c0-4.42-4.03-8-9-8z"
+        fill={color}
+      />
+      <text
+        x="9"
+        y="9"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fill="white"
+        fontSize={glyph.length > 2 ? '6' : '8'}
+        fontWeight="700"
+        fontFamily="-apple-system,system-ui,sans-serif"
+      >
+        {glyph}
+      </text>
+    </svg>
+  )
+}
 
 export default function MapLegend() {
   return (
-    <div className="absolute bottom-4 left-4 z-10 bg-white/90 backdrop-blur-md rounded-xl shadow-lg px-3 py-2.5 flex flex-col gap-1.5 pointer-events-auto">
+    <div className="absolute bottom-4 left-4 z-10 bg-white/90 backdrop-blur-md rounded-xl shadow-lg px-3 py-2.5 flex flex-col gap-1 pointer-events-auto">
       {LEGEND_ITEMS.map((item) => (
-        <div key={item.label} className="flex items-center gap-2">
-          <div
-            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-            style={{
-              background: item.bg,
-              border: `2px solid ${item.color}`,
-              color: item.color,
-            }}
-          >
-            {item.glyph}
-          </div>
+        <div key={item.label} className="flex items-center gap-1.5">
+          <PinIcon color={item.color} glyph={item.glyph} />
           <span className="text-[11px] font-medium text-gray-700 leading-tight whitespace-nowrap">
             {item.label}
           </span>

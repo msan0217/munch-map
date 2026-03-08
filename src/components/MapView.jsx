@@ -9,22 +9,40 @@ const DEFAULT_ZOOM_LEVEL = 10
 // --- Layer color palette ---
 const COLORS = {
   google: '#FF6B6B',
-  googleBg: '#FFF0F0',
   michelinStar: '#D4A017',
-  michelinStarBg: '#FFF8E1',
   michelinBib: '#E8711A',
-  michelinBibBg: '#FFF3E8',
   michelinSelected: '#6B7280',
-  michelinSelectedBg: '#F3F4F6',
+  dual: '#8B5CF6',
 }
 
 // Michelin distinction config
 const MICHELIN_STYLES = {
-  '1 Star': { color: COLORS.michelinStar, bg: COLORS.michelinStarBg, glyph: '★', label: '1 Star' },
-  '2 Stars': { color: COLORS.michelinStar, bg: COLORS.michelinStarBg, glyph: '★★', label: '2 Stars' },
-  '3 Stars': { color: COLORS.michelinStar, bg: COLORS.michelinStarBg, glyph: '★★★', label: '3 Stars' },
-  'Bib Gourmand': { color: COLORS.michelinBib, bg: COLORS.michelinBibBg, glyph: '𝐁', label: 'Bib Gourmand' },
-  'Selected': { color: COLORS.michelinSelected, bg: COLORS.michelinSelectedBg, glyph: '◆', label: 'Selected' },
+  '1 Star': { color: COLORS.michelinStar, glyph: '★', label: '1 Star' },
+  '2 Stars': { color: COLORS.michelinStar, glyph: '★★', label: '2 Stars' },
+  '3 Stars': { color: COLORS.michelinStar, glyph: '★★★', label: '3 Stars' },
+  'Bib Gourmand': { color: COLORS.michelinBib, glyph: '𝐁', label: 'Bib Gourmand' },
+  'Selected': { color: COLORS.michelinSelected, glyph: '◆', label: 'Selected' },
+}
+
+// --- SVG glyph images for dual-source markers ---
+// Creates an SVG with two icons stacked vertically inside the balloon pin
+const DUAL_GLYPH_CACHE = {}
+function dualGlyphImage(michelinGlyph) {
+  if (DUAL_GLYPH_CACHE[michelinGlyph]) return DUAL_GLYPH_CACHE[michelinGlyph]
+  // Top: michelin glyph, Bottom: fork emoji (🍴 doesn't render in SVG, use ψ as fork)
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+    <text x="14" y="9" text-anchor="middle" dominant-baseline="central"
+      fill="white" font-family="-apple-system,system-ui,sans-serif"
+      font-size="10" font-weight="700">${michelinGlyph}</text>
+    <line x1="4" y1="14" x2="24" y2="14" stroke="rgba(255,255,255,0.35)" stroke-width="0.75"/>
+    <text x="14" y="21" text-anchor="middle" dominant-baseline="central"
+      fill="white" font-family="-apple-system,system-ui,sans-serif"
+      font-size="11" font-weight="600">🍴</text>
+  </svg>`
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
+  const img = { 1: url, 2: url, 3: url }
+  DUAL_GLYPH_CACHE[michelinGlyph] = img
+  return img
 }
 
 function austinCameraBoundary(mapkit) {
@@ -42,94 +60,7 @@ function zoomToSpan(zoom) {
   return 360 / Math.pow(2, zoom)
 }
 
-// --- Marker element factories ---
-
-function createBadge(glyph, color, bg, size = 28, fontSize = 13) {
-  const badge = document.createElement('div')
-  badge.style.cssText = `
-    width: ${size}px; height: ${size}px; border-radius: 50%;
-    background: ${bg}; border: 2.5px solid ${color};
-    display: flex; align-items: center; justify-content: center;
-    font-size: ${fontSize}px; line-height: 1; color: ${color};
-    font-weight: 700; cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  `
-  badge.textContent = glyph
-  badge.addEventListener('mouseenter', () => {
-    badge.style.transform = 'scale(1.15)'
-    badge.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)'
-  })
-  badge.addEventListener('mouseleave', () => {
-    badge.style.transform = 'scale(1)'
-    badge.style.boxShadow = '0 1px 4px rgba(0,0,0,0.18)'
-  })
-  return badge
-}
-
-function createClusterBadge(count, color, bg) {
-  const size = count >= 100 ? 42 : count >= 10 ? 36 : 32
-  const fontSize = count >= 100 ? 13 : count >= 10 ? 13 : 14
-  const badge = createBadge(String(count), color, bg, size, fontSize)
-  badge.style.fontWeight = '800'
-  badge.style.borderWidth = '3px'
-  return badge
-}
-
-function createGoogleMarker() {
-  return createBadge('🍴', COLORS.google, COLORS.googleBg)
-}
-
-function createMichelinMarker(distinction) {
-  const style = MICHELIN_STYLES[distinction] || MICHELIN_STYLES['Selected']
-  return createBadge(style.glyph, style.color, style.bg)
-}
-
-function createDualMarker(distinction) {
-  const container = document.createElement('div')
-  container.style.cssText = `
-    display: flex; align-items: center; gap: 0px;
-    cursor: pointer; position: relative;
-  `
-
-  // Pill background connecting both badges
-  const pill = document.createElement('div')
-  pill.style.cssText = `
-    position: absolute; inset: -2px; border-radius: 18px;
-    background: white; box-shadow: 0 1px 6px rgba(0,0,0,0.15);
-    z-index: 0;
-  `
-  container.appendChild(pill)
-
-  const googleBadge = createBadge('🍴', COLORS.google, COLORS.googleBg)
-  googleBadge.style.position = 'relative'
-  googleBadge.style.zIndex = '1'
-  googleBadge.style.boxShadow = 'none'
-  googleBadge.style.marginRight = '-4px'
-
-  const style = MICHELIN_STYLES[distinction] || MICHELIN_STYLES['Selected']
-  const michelinBadge = createBadge(style.glyph, style.color, style.bg)
-  michelinBadge.style.position = 'relative'
-  michelinBadge.style.zIndex = '1'
-  michelinBadge.style.boxShadow = 'none'
-
-  container.appendChild(googleBadge)
-  container.appendChild(michelinBadge)
-
-  container.addEventListener('mouseenter', () => {
-    pill.style.boxShadow = '0 2px 10px rgba(0,0,0,0.22)'
-    container.style.transform = 'scale(1.1)'
-  })
-  container.addEventListener('mouseleave', () => {
-    pill.style.boxShadow = '0 1px 6px rgba(0,0,0,0.15)'
-    container.style.transform = 'scale(1)'
-  })
-  container.style.transition = 'transform 0.15s ease'
-
-  return container
-}
-
-// --- Callout element ---
+// --- Callout element (only DOM we create — lazy, on-demand) ---
 
 function createCalloutElement(item) {
   const el = document.createElement('div')
@@ -140,13 +71,11 @@ function createCalloutElement(item) {
     box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   `
 
-  // Name
   const name = document.createElement('div')
   name.style.cssText = 'font-weight: 600; font-size: 15px; margin-bottom: 6px; color: #1d1d1f;'
   name.textContent = item.name
   el.appendChild(name)
 
-  // Source badges row
   const badges = document.createElement('div')
   badges.style.cssText = 'display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;'
 
@@ -154,7 +83,7 @@ function createCalloutElement(item) {
     const gBadge = document.createElement('span')
     gBadge.style.cssText = `
       font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px;
-      background: ${COLORS.googleBg}; color: ${COLORS.google}; border: 1px solid ${COLORS.google};
+      background: #FFF0F0; color: ${COLORS.google}; border: 1px solid ${COLORS.google};
     `
     const stars = '★'.repeat(Math.floor(item.google.rating))
     gBadge.textContent = `${stars} ${item.google.rating} (${item.google.reviewCount.toLocaleString()})`
@@ -166,7 +95,7 @@ function createCalloutElement(item) {
     const mBadge = document.createElement('span')
     mBadge.style.cssText = `
       font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px;
-      background: ${style.bg}; color: ${style.color}; border: 1px solid ${style.color};
+      background: #FFF8E1; color: ${style.color}; border: 1px solid ${style.color};
     `
     mBadge.textContent = `${style.glyph} ${style.label}`
     badges.appendChild(mBadge)
@@ -174,19 +103,15 @@ function createCalloutElement(item) {
 
   el.appendChild(badges)
 
-  // Details
   const details = document.createElement('div')
   details.style.cssText = 'font-size: 12px; color: #6e6e73; margin-bottom: 8px;'
-
   const parts = []
   if (item.michelin?.cuisine) parts.push(item.michelin.cuisine)
   if (item.michelin?.priceLevel) parts.push(item.michelin.priceLevel)
   if (item.google?.address) parts.push(item.google.address)
-
   details.textContent = parts.join(' · ')
   if (parts.length) el.appendChild(details)
 
-  // Links
   const links = document.createElement('div')
   links.style.cssText = 'display: flex; gap: 10px; font-size: 12px; flex-wrap: wrap;'
 
@@ -221,10 +146,9 @@ function createCalloutElement(item) {
 export default function MapView({ restaurants = [], layers = { google: true, michelin: true } }) {
   const mapContainerRef = useRef(null)
   const mapInstanceRef = useRef(null)
-  const annotationsRef = useRef([]) // { annotation, sources }
   const [mapReady, setMapReady] = useState(false)
 
-  // Init map once
+  // Init map once — survives StrictMode double-fire by reusing existing map
   useEffect(() => {
     function loadMapKit() {
       return new Promise((resolve, reject) => {
@@ -241,6 +165,12 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
       })
     }
 
+    // If the map already exists (StrictMode remount), just signal ready
+    if (mapInstanceRef.current) {
+      setMapReady(true)
+      return
+    }
+
     let cancelled = false
 
     loadMapKit().then((mapkit) => {
@@ -253,6 +183,12 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
         mapkit.initialized = true
       }
 
+      // Guard against StrictMode creating duplicate maps
+      if (mapInstanceRef.current) {
+        setMapReady(true)
+        return
+      }
+
       const span = zoomToSpan(DEFAULT_ZOOM_LEVEL)
       const map = new mapkit.Map(mapContainerRef.current, {
         center: new mapkit.Coordinate(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude),
@@ -261,7 +197,6 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
           new mapkit.CoordinateSpan(span, span)
         ),
         mapType: mapkit.Map.MapTypes.Standard,
-        showsCompass: mapkit.FeatureVisibility.Visible,
         showsZoomControl: true,
         showsMapTypeControl: false,
         isScrollEnabled: true,
@@ -273,55 +208,41 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
 
       map.padding = new mapkit.Padding({ top: 16, right: 16, bottom: 32, left: 16 })
 
-      // Custom cluster annotations matching circular badge style
+      // Native cluster styling — modify the MarkerAnnotation in-place
       map.annotationForCluster = (clusterAnnotation) => {
         const members = clusterAnnotation.memberAnnotations
         const count = members.length
 
-        // Determine dominant source color from member data
         let hasGoogle = false
         let hasMichelin = false
         for (const m of members) {
-          const t = m._sourceType
+          const t = m.data?.sourceType
           if (t === 'google' || t === 'dual') hasGoogle = true
           if (t === 'michelin' || t === 'dual') hasMichelin = true
           if (hasGoogle && hasMichelin) break
         }
 
-        let color, bg
         if (hasGoogle && hasMichelin) {
-          color = '#8B5CF6'
-          bg = '#F3EEFF'
+          clusterAnnotation.color = COLORS.dual
         } else if (hasMichelin) {
-          color = COLORS.michelinStar
-          bg = COLORS.michelinStarBg
+          clusterAnnotation.color = COLORS.michelinStar
         } else {
-          color = COLORS.google
-          bg = COLORS.googleBg
+          clusterAnnotation.color = COLORS.google
         }
 
-        return new mapkit.Annotation(
-          clusterAnnotation.coordinate,
-          () => createClusterBadge(count, color, bg),
-          {
-            clusteringIdentifier: null,
-            displayPriority: 750,
-            collisionMode: mapkit.Annotation.CollisionMode.Circle,
-            data: { clusterCount: count },
-          }
-        )
+        clusterAnnotation.glyphText = `${count}`
+        clusterAnnotation.displayPriority = 750
+        return clusterAnnotation
       }
 
       mapInstanceRef.current = map
       setMapReady(true)
     })
 
+    // Don't destroy map on StrictMode cleanup — it corrupts MapKit tile state.
+    // Map will be destroyed when the component truly unmounts (page navigation).
     return () => {
       cancelled = true
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.destroy()
-        mapInstanceRef.current = null
-      }
     }
   }, [])
 
@@ -331,76 +252,68 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
     const mapkit = window.mapkit
     if (!map || !mapkit) return
 
-    // Defer DOM-heavy annotation swap to next frame to avoid
-    // interfering with React's synchronous commit phase
-    let cancelled = false
-    const rafId = requestAnimationFrame(() => {
-      if (cancelled) return
-
-      // Remove ALL annotations (including cluster annotations created by MapKit)
-      try {
-        if (map.annotations.length) map.removeAnnotations(map.annotations)
-      } catch {
-        // map may have been destroyed between frames
-      }
-      annotationsRef.current = []
-
-      if (cancelled) return
-
-      const newAnnotations = []
-
-      for (const item of restaurants) {
-        const hasGoogle = item.sources.includes('google')
-        const hasMichelin = item.sources.includes('michelin')
-        const showGoogle = hasGoogle && layers.google
-        const showMichelin = hasMichelin && layers.michelin
-
-        if (!showGoogle && !showMichelin) continue
-
-        const coord = new mapkit.Coordinate(item.latitude, item.longitude)
-        const isDual = showGoogle && showMichelin
-
-        let factory
-        let sourceType
-
-        if (isDual) {
-          const distinction = item.michelin?.distinction
-          factory = () => createDualMarker(distinction)
-          sourceType = 'dual'
-        } else if (showMichelin) {
-          const distinction = item.michelin?.distinction
-          factory = () => createMichelinMarker(distinction)
-          sourceType = 'michelin'
-        } else {
-          factory = () => createGoogleMarker()
-          sourceType = 'google'
-        }
-
-        const annotation = new mapkit.Annotation(coord, factory, {
-          title: item.name,
-          clusteringIdentifier: 'restaurant',
-          displayPriority: sourceType === 'dual' ? 750 : sourceType === 'michelin' ? 600 : 500,
-          collisionMode: mapkit.Annotation.CollisionMode.Circle,
-          callout: {
-            calloutElementForAnnotation: () => createCalloutElement(item),
-          },
-        })
-        // Tag for cluster color detection
-        annotation._sourceType = sourceType
-
-        newAnnotations.push({ annotation, sources: item.sources })
-      }
-
-      if (!cancelled) {
-        map.addAnnotations(newAnnotations.map((a) => a.annotation))
-        annotationsRef.current = newAnnotations
-      }
-    })
-
-    return () => {
-      cancelled = true
-      cancelAnimationFrame(rafId)
+    // Clear all existing annotations (spread to avoid live-array mutation)
+    try {
+      const existing = [...map.annotations]
+      if (existing.length) map.removeAnnotations(existing)
+    } catch {
+      // map may have been destroyed
     }
+
+    const annotations = []
+
+    for (const item of restaurants) {
+      const hasGoogle = item.sources.includes('google')
+      const hasMichelin = item.sources.includes('michelin')
+      const showGoogle = hasGoogle && layers.google
+      const showMichelin = hasMichelin && layers.michelin
+
+      if (!showGoogle && !showMichelin) continue
+
+      const coord = new mapkit.Coordinate(item.latitude, item.longitude)
+      const isDual = showGoogle && showMichelin
+
+      let color, glyphText, glyphImage, sourceType
+
+      if (isDual) {
+        const style = MICHELIN_STYLES[item.michelin?.distinction] || MICHELIN_STYLES['Selected']
+        color = COLORS.dual
+        glyphImage = dualGlyphImage(style.glyph)
+        glyphText = undefined
+        sourceType = 'dual'
+      } else if (showMichelin) {
+        const style = MICHELIN_STYLES[item.michelin?.distinction] || MICHELIN_STYLES['Selected']
+        color = style.color
+        glyphText = style.glyph
+        sourceType = 'michelin'
+      } else {
+        color = COLORS.google
+        glyphText = '🍴'
+        sourceType = 'google'
+      }
+
+      const opts = {
+        color,
+        glyphText,
+        title: item.name,
+        clusteringIdentifier: 'restaurant',
+        displayPriority: sourceType === 'dual' ? 350 : sourceType === 'michelin' ? 300 : 200,
+        collisionMode: mapkit.Annotation.CollisionMode.Circle,
+        data: { sourceType, item },
+        callout: {
+          calloutElementForAnnotation: () => createCalloutElement(item),
+        },
+      }
+
+      if (glyphImage) {
+        opts.glyphImage = glyphImage
+        delete opts.glyphText
+      }
+
+      annotations.push(new mapkit.MarkerAnnotation(coord, opts))
+    }
+
+    map.addAnnotations(annotations)
   }, [restaurants, layers, mapReady])
 
   return (
