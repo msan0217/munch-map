@@ -44,13 +44,13 @@ function zoomToSpan(zoom) {
 
 // --- Marker element factories ---
 
-function createBadge(glyph, color, bg) {
+function createBadge(glyph, color, bg, size = 28, fontSize = 13) {
   const badge = document.createElement('div')
   badge.style.cssText = `
-    width: 28px; height: 28px; border-radius: 50%;
+    width: ${size}px; height: ${size}px; border-radius: 50%;
     background: ${bg}; border: 2.5px solid ${color};
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; line-height: 1; color: ${color};
+    font-size: ${fontSize}px; line-height: 1; color: ${color};
     font-weight: 700; cursor: pointer;
     box-shadow: 0 1px 4px rgba(0,0,0,0.18);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -64,6 +64,15 @@ function createBadge(glyph, color, bg) {
     badge.style.transform = 'scale(1)'
     badge.style.boxShadow = '0 1px 4px rgba(0,0,0,0.18)'
   })
+  return badge
+}
+
+function createClusterBadge(count, color, bg) {
+  const size = count >= 100 ? 42 : count >= 10 ? 36 : 32
+  const fontSize = count >= 100 ? 13 : count >= 10 ? 13 : 14
+  const badge = createBadge(String(count), color, bg, size, fontSize)
+  badge.style.fontWeight = '800'
+  badge.style.borderWidth = '3px'
   return badge
 }
 
@@ -264,20 +273,43 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
 
       map.padding = new mapkit.Padding({ top: 16, right: 16, bottom: 32, left: 16 })
 
-      // Style clusters per group
+      // Custom cluster annotations matching circular badge style
       map.annotationForCluster = (clusterAnnotation) => {
-        const id = clusterAnnotation.memberAnnotations[0]?.clusteringIdentifier
-        const count = clusterAnnotation.memberAnnotations.length
-        if (id === 'google') {
-          clusterAnnotation.color = COLORS.google
-          clusterAnnotation.glyphText = `${count}`
-        } else if (id === 'michelin') {
-          clusterAnnotation.color = COLORS.michelinStar
-          clusterAnnotation.glyphText = `${count}`
-        } else if (id === 'dual') {
-          clusterAnnotation.color = '#8B5CF6'
-          clusterAnnotation.glyphText = `${count}`
+        const members = clusterAnnotation.memberAnnotations
+        const count = members.length
+
+        // Determine dominant source color from member data
+        let hasGoogle = false
+        let hasMichelin = false
+        for (const m of members) {
+          const t = m._sourceType
+          if (t === 'google' || t === 'dual') hasGoogle = true
+          if (t === 'michelin' || t === 'dual') hasMichelin = true
+          if (hasGoogle && hasMichelin) break
         }
+
+        let color, bg
+        if (hasGoogle && hasMichelin) {
+          color = '#8B5CF6'
+          bg = '#F3EEFF'
+        } else if (hasMichelin) {
+          color = COLORS.michelinStar
+          bg = COLORS.michelinStarBg
+        } else {
+          color = COLORS.google
+          bg = COLORS.googleBg
+        }
+
+        return new mapkit.Annotation(
+          clusterAnnotation.coordinate,
+          () => createClusterBadge(count, color, bg),
+          {
+            clusteringIdentifier: null,
+            displayPriority: 750,
+            collisionMode: mapkit.Annotation.CollisionMode.Circle,
+            data: { clusterCount: count },
+          }
+        )
       }
 
       mapInstanceRef.current = map
@@ -305,10 +337,9 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
     const rafId = requestAnimationFrame(() => {
       if (cancelled) return
 
-      // Remove all existing annotations
+      // Remove ALL annotations (including cluster annotations created by MapKit)
       try {
-        const old = annotationsRef.current.map((a) => a.annotation)
-        if (old.length) map.removeAnnotations(old)
+        if (map.annotations.length) map.removeAnnotations(map.annotations)
       } catch {
         // map may have been destroyed between frames
       }
@@ -330,28 +361,32 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
         const isDual = showGoogle && showMichelin
 
         let factory
-        let clusterId
+        let sourceType
 
         if (isDual) {
           const distinction = item.michelin?.distinction
           factory = () => createDualMarker(distinction)
-          clusterId = 'dual'
+          sourceType = 'dual'
         } else if (showMichelin) {
           const distinction = item.michelin?.distinction
           factory = () => createMichelinMarker(distinction)
-          clusterId = 'michelin'
+          sourceType = 'michelin'
         } else {
           factory = () => createGoogleMarker()
-          clusterId = 'google'
+          sourceType = 'google'
         }
 
         const annotation = new mapkit.Annotation(coord, factory, {
           title: item.name,
-          clusteringIdentifier: clusterId,
+          clusteringIdentifier: 'restaurant',
+          displayPriority: sourceType === 'dual' ? 750 : sourceType === 'michelin' ? 600 : 500,
+          collisionMode: mapkit.Annotation.CollisionMode.Circle,
           callout: {
             calloutElementForAnnotation: () => createCalloutElement(item),
           },
         })
+        // Tag for cluster color detection
+        annotation._sourceType = sourceType
 
         newAnnotations.push({ annotation, sources: item.sources })
       }
