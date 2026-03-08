@@ -1,7 +1,7 @@
 # MunchMap — Claude Context
 
 ## What this is
-MunchMap is a food/restaurant discovery map app. Early-stage — currently a layout skeleton with a sidebar and Apple MapKit JS map.
+MunchMap is a food/restaurant discovery map app with multi-source restaurant data displayed on an Apple MapKit JS map.
 
 ## Stack
 - **React 19** + **Vite 7** (JSX, functional components + hooks)
@@ -14,15 +14,18 @@ MunchMap is a food/restaurant discovery map app. Early-stage — currently a lay
 src/
   main.jsx              — React entry point
   index.css             — Tailwind import + base styles
-  App.jsx               — Layout: sidebar (20%) + map (80%), passes restaurant data to MapView
+  App.jsx               — Layout, layer state management, merges Google + Michelin data
   config/
     austin.js           — Shared Austin center coords + radius (used by map & fetch script)
   data/
     google-top-rated.json — Google Places top-rated restaurants (generated, committed)
     michelin.json         — Michelin Guide restaurants (generated, committed)
+  utils/
+    mergeRestaurants.js — Deduplicates Google + Michelin by name/proximity, filters to Austin area
   components/
-    Sidebar.jsx         — Left panel (dark bg, buttons: Add Filter / Search Nearby / Saved Places)
-    MapView.jsx         — MapKit JS map, renders restaurant annotations with clustering
+    Sidebar.jsx         — Left panel with layer toggles + action buttons
+    MapView.jsx         — MapKit JS map with custom DOM annotations, per-source styling, clustering
+    MapLegend.jsx       — Floating map legend overlay showing marker types
 scripts/
   fetch-google-top-rated.mjs — Fetches Austin restaurants from Google Places Text Search API
   fetch-michelin.mjs         — Scrapes Michelin Guide Austin restaurants via Playwright
@@ -33,8 +36,10 @@ scripts/
 - MapKit JS loaded dynamically in `useEffect`; guarded against double-init with `mapkit.initialized` flag
 - Map cleanup via `mapInstanceRef.current.destroy()` on unmount; `cancelled` flag prevents race on fast unmount
 - `zoomToSpan(zoom)` converts zoom level → MapKit `CoordinateSpan` (degrees): `360 / 2^zoom`
-- Layout: sidebar is full-width on mobile, `w-1/5` (min 240px, max 320px) on `md+`
-- Map (`MapView`) is hidden on mobile (`hidden md:block`), sidebar always visible
+- Layout: single MapView instance shared across mobile/desktop; sidebar is full-width overlay on mobile, `w-1/5` (min 240px, max 320px) on `md+`
+- **Multi-layer annotations:** Uses `mapkit.Annotation` with custom DOM element factories (not `MarkerAnnotation`) for full visual control. Three marker types: Google-only (coral), Michelin-only (gold/orange/gray by distinction), and dual-source (side-by-side pill). Annotation updates use `requestAnimationFrame` to avoid crashing MapKit during React's commit phase.
+- **Layer toggles:** `layers` state in App controls which sources are visible; MapView removes/re-adds annotations on toggle
+- **Data merging:** `mergeRestaurants()` matches across datasets by normalized name + haversine proximity (<1km), filters Michelin to Austin area
 
 ## Restaurant Data Pipelines
 
