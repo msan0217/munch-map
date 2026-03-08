@@ -112,6 +112,7 @@ export default function MapView({ restaurants = [] }) {
           ),
           new mapkit.CoordinateSpan(span, span)
         ),
+        mapType: mapkit.Map.MapTypes.MutedStandard,
         showsCompass: mapkit.FeatureVisibility.Visible,
         showsZoomControl: true,
         showsMapTypeControl: true,
