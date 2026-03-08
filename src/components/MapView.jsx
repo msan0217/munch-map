@@ -132,6 +132,9 @@ export default function MapView({ restaurants = [] }) {
         isZoomEnabled: true,
         isRotationEnabled: false,
         cameraBoundary: austinCameraBoundary(mapkit),
+        cameraZoomRange: new mapkit.MapCameraZoomRange({
+          maxCameraDistance: AUSTIN_RADIUS_KM * 1000 * 3,
+        }),
       })
 
       map.padding = new mapkit.Padding({ top: 16, right: 16, bottom: 32, left: 16 })
