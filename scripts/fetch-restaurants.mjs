@@ -8,6 +8,7 @@
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'
+import { AUSTIN_CENTER, AUSTIN_RADIUS_KM } from '../src/config/austin.js'
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY
 if (!API_KEY) {
@@ -16,8 +17,8 @@ if (!API_KEY) {
 }
 
 // Austin center and search parameters
-const CENTER = { lat: 30.3500, lng: -97.7431 }
-const COVERAGE_RADIUS_KM = 40
+const CENTER = AUSTIN_CENTER
+const COVERAGE_RADIUS_KM = AUSTIN_RADIUS_KM
 const SEARCH_RADIUS_M = 5000
 const GRID_SPACING_KM = 8
 const MIN_RATING = 4.5
