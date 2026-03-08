@@ -1,28 +1,17 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import Sidebar from './components/Sidebar'
 import MapView from './components/MapView'
 import restaurantData from './data/restaurants.json'
-import mapkitPlaces from './data/mapkit-places.json'
 import monchLogo from './assets/monch.jpeg'
 
 function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  const restaurants = useMemo(() => {
-    const excludedTypes = ['movie_theater', 'hotel']
-    return restaurantData.restaurants
-      .filter((r) => !excludedTypes.includes(r.primaryType))
-      .map((r) => ({
-        ...r,
-        mapkitPlaceId: mapkitPlaces[r.placeId] || null,
-      }))
-  }, [])
-
   return (
     <>
       {/* Mobile layout */}
       <div className="relative w-screen h-screen md:hidden">
-        <MapView restaurants={restaurants} />
+        <MapView restaurants={restaurantData.restaurants} />
 
         {/* Top bar */}
         <div
@@ -50,7 +39,7 @@ function App() {
           <Sidebar />
         </div>
         <div className="flex-1">
-          <MapView restaurants={restaurants} />
+          <MapView restaurants={restaurantData.restaurants} />
         </div>
       </div>
     </>
