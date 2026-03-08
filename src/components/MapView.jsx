@@ -198,17 +198,24 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
 
         let hasGoogle = false
         let hasMichelin = false
+        let hasMichelinStar = false
         for (const m of members) {
           const t = m.data?.sourceType
           if (t === 'google' || t === 'dual') hasGoogle = true
-          if (t === 'michelin' || t === 'dual') hasMichelin = true
-          if (hasGoogle && hasMichelin) break
+          if (t === 'michelin' || t === 'dual') {
+            hasMichelin = true
+            const distinction = m.data?.item?.michelin?.distinction
+            if (distinction === '1 Star' || distinction === '2 Stars' || distinction === '3 Stars') {
+              hasMichelinStar = true
+            }
+          }
+          if (hasGoogle && hasMichelin && hasMichelinStar) break
         }
 
         if (hasGoogle && hasMichelin) {
           clusterAnnotation.color = COLORS.dual
         } else if (hasMichelin) {
-          clusterAnnotation.color = COLORS.michelinStar
+          clusterAnnotation.color = hasMichelinStar ? COLORS.michelinStar : COLORS.michelinBib
         } else {
           clusterAnnotation.color = COLORS.google
         }
