@@ -2,9 +2,24 @@ import { useEffect, useRef } from 'react'
 
 const MAPKIT_TOKEN = import.meta.env.VITE_MAPKIT_TOKEN
 
-// Default center: Austin, TX
-const DEFAULT_CENTER = { latitude: 30.3500, longitude: -97.7431 }
+// Austin area — must match the Google scrape coverage (fetch-restaurants.mjs)
+const AUSTIN_CENTER = { latitude: 30.2672, longitude: -97.7431 }
+const AUSTIN_RADIUS_KM = 40
+
+const DEFAULT_CENTER = AUSTIN_CENTER
 const DEFAULT_ZOOM_LEVEL = 10
+
+// Build a CoordinateRegion that covers the Austin scrape area (used as cameraBoundary)
+function austinCameraBoundary(mapkit) {
+  const kmPerDegreeLat = 111.32
+  const kmPerDegreeLng = 111.32 * Math.cos((AUSTIN_CENTER.latitude * Math.PI) / 180)
+  const latSpan = (AUSTIN_RADIUS_KM / kmPerDegreeLat) * 2
+  const lngSpan = (AUSTIN_RADIUS_KM / kmPerDegreeLng) * 2
+  return new mapkit.CoordinateRegion(
+    new mapkit.Coordinate(AUSTIN_CENTER.latitude, AUSTIN_CENTER.longitude),
+    new mapkit.CoordinateSpan(latSpan, lngSpan)
+  )
+}
 
 // Convert zoom level to MapKit span (approximate degrees visible)
 function zoomToSpan(zoom) {
@@ -119,6 +134,7 @@ export default function MapView({ restaurants = [] }) {
         isScrollEnabled: true,
         isZoomEnabled: true,
         isRotationEnabled: false,
+        cameraBoundary: austinCameraBoundary(mapkit),
       })
 
       map.padding = new mapkit.Padding({ top: 16, right: 16, bottom: 32, left: 16 })
