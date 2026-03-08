@@ -80,22 +80,6 @@ export default function Sidebar({ onClose, layers, onToggleLayer }) {
         />
       </div>
 
-      <hr className="border-gray-700" />
-
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</h2>
-
-      <button className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors cursor-pointer">
-        Add Filter
-      </button>
-
-      <button className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors cursor-pointer">
-        Search Nearby
-      </button>
-
-      <button className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors cursor-pointer">
-        Saved Places
-      </button>
-
       <div className="mt-auto text-xs text-gray-500">
         MunchMap v0.1
       </div>
