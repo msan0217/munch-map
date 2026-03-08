@@ -1,16 +1,27 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Sidebar from './components/Sidebar'
 import MapView from './components/MapView'
 import restaurantData from './data/restaurants.json'
+import mapkitPlaces from './data/mapkit-places.json'
 
 function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const restaurants = useMemo(() => {
+    const excludedTypes = ['movie_theater', 'hotel']
+    return restaurantData.restaurants
+      .filter((r) => !excludedTypes.includes(r.primaryType))
+      .map((r) => ({
+        ...r,
+        mapkitPlaceId: mapkitPlaces[r.placeId] || null,
+      }))
+  }, [])
 
   return (
     <>
       {/* Mobile layout */}
       <div className="relative w-screen h-screen md:hidden">
-        <MapView restaurants={restaurantData.restaurants} />
+        <MapView restaurants={restaurants} />
 
         {/* Top bar */}
         <div
@@ -35,7 +46,7 @@ function App() {
           <Sidebar />
         </div>
         <div className="flex-1">
-          <MapView restaurants={restaurantData.restaurants} />
+          <MapView restaurants={restaurants} />
         </div>
       </div>
     </>
