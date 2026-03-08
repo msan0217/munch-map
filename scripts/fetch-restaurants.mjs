@@ -1,5 +1,5 @@
 /**
- * Fetch high-quality Austin restaurants from Google Places API (Nearby Search v2).
+ * Fetch high-quality Austin restaurants from Google Places API (Text Search v2).
  *
  * Usage:
  *   node --env-file=.env scripts/fetch-restaurants.mjs
@@ -20,10 +20,26 @@ if (!API_KEY) {
 const CENTER = AUSTIN_CENTER
 const COVERAGE_RADIUS_KM = AUSTIN_RADIUS_KM
 const SEARCH_RADIUS_M = 5000
-const GRID_SPACING_KM = 8
+const GRID_SPACING_KM = 5
 const MIN_RATING = 4.5
 const MIN_REVIEWS = 100
-const REQUEST_DELAY_MS = 1000
+const REQUEST_DELAY_MS = 150
+const EXCLUDED_PRIMARY_TYPES = new Set([
+  'movie_theater',
+  'hotel',
+  'bar',
+  'shopping_mall',
+  'grocery_store',
+  'convenience_store',
+  'video_arcade',
+  'adventure_sports_center',
+  'association_or_organization',
+  'marina',
+  'asian_grocery_store',
+  'live_music_venue',
+  'tourist_attraction',
+  'event_venue',
+])
 
 const FIELD_MASK = [
   'places.id',
@@ -37,10 +53,8 @@ const FIELD_MASK = [
   'places.types',
   'places.googleMapsUri',
   'places.websiteUri',
+  'nextPageToken',
 ].join(',')
-
-// Nearby Search (New) returns max 20 results per call and does NOT support pagination.
-// We rely on the dense grid to get coverage instead.
 
 function generateGridPoints(center, radiusKm, spacingKm) {
   const points = []
@@ -72,24 +86,33 @@ function generateGridPoints(center, radiusKm, spacingKm) {
   return points
 }
 
-async function searchNearby(lat, lng) {
-  const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+async function textSearch(lat, lng, pageToken) {
+  const body = {
+    textQuery: 'restaurants',
+    includedType: 'restaurant',
+    minRating: MIN_RATING,
+    rankPreference: 'RELEVANCE',
+    locationBias: {
+      circle: {
+        center: { latitude: lat, longitude: lng },
+        radius: SEARCH_RADIUS_M,
+      },
+    },
+    pageSize: 20,
+  }
+
+  if (pageToken) {
+    body.pageToken = pageToken
+  }
+
+  const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': API_KEY,
       'X-Goog-FieldMask': FIELD_MASK,
     },
-    body: JSON.stringify({
-      includedTypes: ['restaurant'],
-      locationRestriction: {
-        circle: {
-          center: { latitude: lat, longitude: lng },
-          radius: SEARCH_RADIUS_M,
-        },
-      },
-      maxResultCount: 20,
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {
@@ -111,7 +134,7 @@ function saveResults(allPlaces, { partial }) {
   for (const place of allPlaces.values()) {
     const rating = place.rating ?? 0
     const reviewCount = place.userRatingCount ?? 0
-    if (rating >= MIN_RATING && reviewCount >= MIN_REVIEWS) {
+    if (rating >= MIN_RATING && reviewCount >= MIN_REVIEWS && !EXCLUDED_PRIMARY_TYPES.has(place.primaryType)) {
       filtered.push({
         placeId: place.id,
         name: place.displayName?.text ?? '',
@@ -155,17 +178,26 @@ async function main() {
 
   for (let i = 0; i < gridPoints.length; i++) {
     const { lat, lng } = gridPoints[i]
+    let pageToken = null
 
     try {
-      const data = await searchNearby(lat, lng)
-      requestCount++
-      if (data.places) {
-        for (const place of data.places) {
-          if (!allPlaces.has(place.id)) {
-            allPlaces.set(place.id, place)
+      do {
+        const data = await textSearch(lat, lng, pageToken)
+        requestCount++
+
+        if (data.places) {
+          for (const place of data.places) {
+            if (!allPlaces.has(place.id)) {
+              allPlaces.set(place.id, place)
+            }
           }
         }
-      }
+
+        pageToken = data.nextPageToken ?? null
+        if (pageToken) {
+          await delay(REQUEST_DELAY_MS)
+        }
+      } while (pageToken)
     } catch (err) {
       console.error(`Error at point ${i} (${lat.toFixed(4)}, ${lng.toFixed(4)}): ${err.message}`)
       if (err.status === 400 || err.status === 401 || err.status === 403) {
@@ -181,7 +213,7 @@ async function main() {
     await delay(REQUEST_DELAY_MS)
 
     if ((i + 1) % 10 === 0) {
-      console.log(`  Searched ${i + 1}/${gridPoints.length} points, ${allPlaces.size} unique places so far`)
+      console.log(`  Searched ${i + 1}/${gridPoints.length} points, ${allPlaces.size} unique places so far (${requestCount} requests)`)
     }
   }
 
