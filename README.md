@@ -2,6 +2,8 @@
 
 A food and restaurant discovery map app built with React and Apple MapKit JS.
 
+https://msan0217.github.io/munch-map/
+
 ## Stack
 
 - React 19 + Vite 7
