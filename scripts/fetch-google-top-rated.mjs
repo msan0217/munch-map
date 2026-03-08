@@ -2,7 +2,7 @@
  * Fetch high-quality Austin restaurants from Google Places API (Text Search v2).
  *
  * Usage:
- *   node --env-file=.env scripts/fetch-restaurants.mjs
+ *   node --env-file=.env scripts/fetch-google-top-rated.mjs
  *
  * Requires GOOGLE_PLACES_API_KEY in .env
  */
@@ -161,7 +161,7 @@ function saveResults(allPlaces, { partial }) {
     restaurants: filtered,
   }
 
-  const outPath = new URL('../src/data/restaurants.json', import.meta.url).pathname
+  const outPath = new URL('../src/data/google-top-rated.json', import.meta.url).pathname
   mkdirSync(new URL('../src/data/', import.meta.url).pathname, { recursive: true })
   writeFileSync(outPath, JSON.stringify(output, null, 2) + '\n')
 

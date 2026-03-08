@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Sidebar from './components/Sidebar'
 import MapView from './components/MapView'
-import restaurantData from './data/restaurants.json'
+import googleTopRated from './data/google-top-rated.json'
 import monchLogo from './assets/monch.jpeg'
 
 function App() {
@@ -11,7 +11,7 @@ function App() {
     <>
       {/* Mobile layout */}
       <div className="relative w-screen h-screen md:hidden">
-        <MapView restaurants={restaurantData.restaurants} />
+        <MapView restaurants={googleTopRated.restaurants} />
 
         {/* Top bar */}
         <div
@@ -39,7 +39,7 @@ function App() {
           <Sidebar />
         </div>
         <div className="flex-1">
-          <MapView restaurants={restaurantData.restaurants} />
+          <MapView restaurants={googleTopRated.restaurants} />
         </div>
       </div>
     </>
