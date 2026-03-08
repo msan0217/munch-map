@@ -124,17 +124,15 @@ export default function MapView({ restaurants = [] }) {
           ),
           new mapkit.CoordinateSpan(span, span)
         ),
-        mapType: mapkit.Map.MapTypes.MutedStandard,
+        mapType: mapkit.Map.MapTypes.Standard,
         showsCompass: mapkit.FeatureVisibility.Visible,
         showsZoomControl: true,
-        showsMapTypeControl: true,
+        showsMapTypeControl: false,
         isScrollEnabled: true,
         isZoomEnabled: true,
         isRotationEnabled: false,
         cameraBoundary: austinCameraBoundary(mapkit),
-        cameraZoomRange: new mapkit.MapCameraZoomRange({
-          maxCameraDistance: AUSTIN_RADIUS_KM * 1000 * 3,
-        }),
+        cameraZoomRange: new mapkit.CameraZoomRange(0, AUSTIN_RADIUS_KM * 1000 * 3),
       })
 
       map.padding = new mapkit.Padding({ top: 16, right: 16, bottom: 32, left: 16 })
