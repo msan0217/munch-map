@@ -40,3 +40,4 @@ npm run lint      # eslint
 - Functional components only, no class components
 - Tailwind utility classes for all styling — no CSS modules or inline styles
 - No TypeScript (plain JSX)
+- **Asset paths:** Vite `base` is set to `/munch-map/` for GitHub Pages. Never hardcode absolute paths (e.g. `/image.png`) for assets — import them via JS (`import img from './assets/foo.png'`) so Vite resolves the base path and adds cache-busting hashes. Only files in `public/` that are referenced in `index.html` (like `favicon.ico`) should use absolute paths.
