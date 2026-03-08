@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react'
 const MAPKIT_TOKEN = import.meta.env.VITE_MAPKIT_TOKEN
 
 // Austin area — must match the Google scrape coverage (fetch-restaurants.mjs)
-const AUSTIN_CENTER = { latitude: 30.2672, longitude: -97.7431 }
+const AUSTIN_CENTER = { latitude: 30.3500, longitude: -97.7431 }
 const AUSTIN_RADIUS_KM = 40
 
 const DEFAULT_CENTER = AUSTIN_CENTER

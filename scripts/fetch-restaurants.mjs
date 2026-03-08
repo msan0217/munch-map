@@ -16,7 +16,7 @@ if (!API_KEY) {
 }
 
 // Austin center and search parameters
-const CENTER = { lat: 30.2672, lng: -97.7431 }
+const CENTER = { lat: 30.3500, lng: -97.7431 }
 const COVERAGE_RADIUS_KM = 40
 const SEARCH_RADIUS_M = 5000
 const GRID_SPACING_KM = 8
