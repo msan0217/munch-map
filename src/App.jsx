@@ -42,7 +42,7 @@ function App() {
       {/* Map (single instance) */}
       <div className="flex-1 relative min-h-0">
         <MapView restaurants={merged} layers={layers} />
-        <MapLegend />
+        <MapLegend layers={layers} />
       </div>
 
       {/* Mobile menu overlay */}

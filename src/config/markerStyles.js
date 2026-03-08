@@ -18,9 +18,9 @@ export const MICHELIN_STYLES = {
 }
 
 export const LEGEND_ITEMS = [
-  { glyph: GOOGLE_GLYPH,                          color: COLORS.google,           label: 'Google Top-Rated' },
-  { glyph: MICHELIN_STYLES['1 Star'].glyph,       color: COLORS.michelinStar,     label: 'Michelin Star' },
-  { glyph: MICHELIN_STYLES['Bib Gourmand'].glyph, color: COLORS.michelinBib,      label: 'Bib Gourmand' },
-  { glyph: MICHELIN_STYLES['Selected'].glyph,     color: COLORS.michelinSelected, label: 'Michelin Selected' },
-  { glyph: DUAL_GLYPH,                            color: COLORS.dual,             label: 'Both Sources' },
+  { glyph: GOOGLE_GLYPH,                          color: COLORS.google,           label: 'Google Top-Rated', sources: ['google'] },
+  { glyph: MICHELIN_STYLES['1 Star'].glyph,       color: COLORS.michelinStar,     label: 'Michelin Star',    sources: ['michelin'] },
+  { glyph: MICHELIN_STYLES['Bib Gourmand'].glyph, color: COLORS.michelinBib,      label: 'Bib Gourmand',     sources: ['michelin'] },
+  { glyph: MICHELIN_STYLES['Selected'].glyph,     color: COLORS.michelinSelected, label: 'Michelin Selected', sources: ['michelin'] },
+  { glyph: DUAL_GLYPH,                            color: COLORS.dual,             label: 'Both Sources',     sources: ['google', 'michelin'] },
 ]
