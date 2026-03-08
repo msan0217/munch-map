@@ -117,7 +117,7 @@ export default function MapView({ restaurants = [] }) {
         showsMapTypeControl: true,
         isScrollEnabled: true,
         isZoomEnabled: true,
-        isRotationEnabled: true,
+        isRotationEnabled: false,
       })
 
       mapInstanceRef.current = map
