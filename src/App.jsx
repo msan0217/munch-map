@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar'
 import MapView from './components/MapView'
 import restaurantData from './data/restaurants.json'
 import mapkitPlaces from './data/mapkit-places.json'
+import monchLogo from './assets/monch.jpeg'
 
 function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -30,7 +31,7 @@ function App() {
         >
           <span className="text-xl leading-none">☰</span>
           <div className="flex items-center gap-2">
-            <img src="/monch.jpeg" alt="MunchMap logo" className="w-6 h-6 rounded-full object-cover object-top" />
+            <img src={monchLogo} alt="MunchMap logo" className="w-6 h-6 rounded-full object-cover object-top" />
             <span className="text-base font-bold tracking-tight">MunchMap</span>
           </div>
         </div>
