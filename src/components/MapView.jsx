@@ -121,6 +121,7 @@ export default function MapView({ restaurants = [] }) {
         isRotationEnabled: false,
       })
 
+      map.padding = new mapkit.Padding({ top: 16, right: 16, bottom: 32, left: 16 })
       mapInstanceRef.current = map
 
       // Add restaurant markers
