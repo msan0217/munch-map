@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MunchMap — Resolve MapKit Place IDs</title>
+  <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js" crossorigin></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+    h1 { font-size: 1.4rem; margin-bottom: 20px; }
+    label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+    input[type="text"], textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-family: monospace; font-size: 0.85rem; }
+    textarea { resize: vertical; }
+    button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:disabled { background: #93b4f5; cursor: not-allowed; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .section { margin-bottom: 20px; }
+    #progress { font-size: 0.9rem; white-space: pre-wrap; max-height: 400px; overflow-y: auto; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; font-family: monospace; font-size: 0.8rem; }
+    .stat { display: inline-block; margin-right: 16px; padding: 4px 10px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
+    .stat-good { background: #d1fae5; color: #065f46; }
+    .stat-warn { background: #fef3c7; color: #92400e; }
+    .stat-bad { background: #fee2e2; color: #991b1b; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Resolve MapKit Place IDs</h1>
+  <p style="margin-bottom: 20px; color: #555; font-size: 0.9rem;">
+    Searches Apple Maps for each restaurant in <code>restaurants.json</code> and caches the MapKit Place ID for runtime lookup.
+  </p>
+
+  <div class="section">
+    <label for="token">MapKit JS Token (JWT)</label>
+    <input type="text" id="token" placeholder="Paste your VITE_MAPKIT_TOKEN value here">
+  </div>
+
+  <div class="section">
+    <label>Restaurant Data</label>
+    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+      <button class="btn-secondary" id="loadFileBtn">Load JSON file</button>
+      <span id="fileStatus" style="align-self: center; font-size: 0.85rem; color: #555;"></span>
+    </div>
+    <input type="file" id="fileInput" accept=".json" class="hidden">
+    <textarea id="inputJson" rows="4" placeholder="Or paste restaurants.json content here"></textarea>
+  </div>
+
+  <div class="section">
+    <label>Search radius (degrees lat/lng span)</label>
+    <input type="text" id="searchSpan" value="0.01" style="width: 100px;">
+    <span style="font-size: 0.8rem; color: #777; margin-left: 8px;">~1km — increase if match rate is low</span>
+  </div>
+
+  <div class="section">
+    <button class="btn-primary" id="startBtn">Start Resolution</button>
+    <button class="btn-secondary hidden" id="stopBtn">Stop</button>
+  </div>
+
+  <div id="stats" class="section hidden"></div>
+  <div id="progress" class="section hidden"></div>
+
+  <div class="section hidden" id="downloadSection">
+    <button class="btn-primary" id="downloadBtn">Download Updated restaurants.json</button>
+  </div>
+
+  <script>
+    const $ = (sel) => document.querySelector(sel)
+
+    // Wire up file input
+    $('#loadFileBtn').addEventListener('click', () => $('#fileInput').click())
+    $('#fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        $('#inputJson').value = reader.result
+        $('#fileStatus').textContent = `Loaded ${file.name} (${(file.size / 1024).toFixed(1)} KB)`
+      }
+      reader.readAsText(file)
+    })
+
+    let stopped = false
+
+    $('#stopBtn').addEventListener('click', () => {
+      stopped = true
+      $('#stopBtn').classList.add('hidden')
+      log('⏹ Stopped by user.')
+    })
+
+    function log(msg) {
+      const el = $('#progress')
+      el.classList.remove('hidden')
+      el.textContent += msg + '\n'
+      el.scrollTop = el.scrollHeight
+    }
+
+    function delay(ms) {
+      return new Promise((r) => setTimeout(r, ms))
+    }
+
+    function haversineMeters(lat1, lng1, lat2, lng2) {
+      const R = 6371000
+      const toRad = (d) => (d * Math.PI) / 180
+      const dLat = toRad(lat2 - lat1)
+      const dLng = toRad(lng2 - lng1)
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    }
+
+    function nameSimilarity(a, b) {
+      const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const na = normalize(a)
+      const nb = normalize(b)
+      if (na === nb) return 1.0
+      if (na.includes(nb) || nb.includes(na)) return 0.8
+      // Simple word overlap
+      const wordsA = new Set(a.toLowerCase().split(/\s+/))
+      const wordsB = new Set(b.toLowerCase().split(/\s+/))
+      const intersection = [...wordsA].filter((w) => wordsB.has(w)).length
+      const union = new Set([...wordsA, ...wordsB]).size
+      return intersection / union
+    }
+
+    function searchPlace(search, restaurant, span) {
+      return new Promise((resolve) => {
+        const region = new mapkit.CoordinateRegion(
+          new mapkit.Coordinate(restaurant.latitude, restaurant.longitude),
+          new mapkit.CoordinateSpan(span, span)
+        )
+        search.search(restaurant.name, (error, data) => {
+          if (error || !data || !data.places || data.places.length === 0) {
+            resolve({ match: null, error: error?.message || 'No results' })
+            return
+          }
+
+          // Score each result
+          const scored = data.places.map((place) => {
+            const dist = haversineMeters(
+              restaurant.latitude, restaurant.longitude,
+              place.coordinate.latitude, place.coordinate.longitude
+            )
+            const nameSim = nameSimilarity(restaurant.name, place.name)
+            // Lower is better: distance penalty + inverse name similarity
+            const score = dist / 1000 + (1 - nameSim) * 5
+            return { place, dist, nameSim, score }
+          })
+
+          scored.sort((a, b) => a.score - b.score)
+          const best = scored[0]
+
+          // Determine confidence
+          let confidence = 'low'
+          if (best.nameSim >= 0.8 && best.dist < 200) confidence = 'high'
+          else if (best.nameSim >= 0.5 && best.dist < 500) confidence = 'medium'
+          else if (best.dist < 100) confidence = 'medium'
+
+          resolve({
+            match: {
+              place: best.place,
+              distance: Math.round(best.dist),
+              nameSimilarity: best.nameSim,
+              confidence,
+            },
+            allResults: scored.length,
+          })
+        }, { region })
+      })
+    }
+
+    function extractPlaceId(place) {
+      // Prefer the I-prefixed MapKit place ID (used by PlaceLookup/PlaceAnnotation).
+      // Numeric _muid values are internal and don't work with PlaceLookup.
+      const candidates = [place.id, place._id, place._muid, place.muid, place.placeID]
+      const prefixed = candidates.find((v) => typeof v === 'string' && v.startsWith('I'))
+      if (prefixed) return prefixed
+      // Fall back to any truthy value, but flag it
+      const fallback = candidates.find(Boolean)
+      if (fallback) console.warn(`  ⚠ Only found non-prefixed ID: ${fallback}`)
+      return fallback || null
+    }
+
+    $('#startBtn').addEventListener('click', async () => {
+      stopped = false
+      $('#progress').textContent = ''
+      $('#progress').classList.remove('hidden')
+      $('#stats').classList.add('hidden')
+      $('#downloadSection').classList.add('hidden')
+      $('#startBtn').disabled = true
+      $('#stopBtn').classList.remove('hidden')
+
+      const token = $('#token').value.trim()
+      if (!token) {
+        log('ERROR: Please provide a MapKit JS token.')
+        $('#startBtn').disabled = false
+        $('#stopBtn').classList.add('hidden')
+        return
+      }
+
+      let data
+      try {
+        data = JSON.parse($('#inputJson').value.trim())
+      } catch (e) {
+        log('ERROR: Invalid JSON — ' + e.message)
+        $('#startBtn').disabled = false
+        $('#stopBtn').classList.add('hidden')
+        return
+      }
+
+      const restaurants = data.restaurants
+      if (!restaurants || !restaurants.length) {
+        log('ERROR: No restaurants found in JSON.')
+        $('#startBtn').disabled = false
+        $('#stopBtn').classList.add('hidden')
+        return
+      }
+
+      const span = parseFloat($('#searchSpan').value) || 0.01
+
+      // Initialize MapKit
+      if (!mapkit.initialized) {
+        mapkit.init({ authorizationCallback: (done) => done(token) })
+        mapkit.initialized = true
+        log('MapKit JS initialized.')
+      }
+
+      const search = new mapkit.Search()
+      log(`Starting resolution for ${restaurants.length} restaurants (span: ${span})...\n`)
+
+      // Log first result's properties for API discovery
+      let loggedSchema = false
+
+      const results = { resolved: 0, unresolved: 0, highConf: 0, medConf: 0, lowConf: 0 }
+
+      for (let i = 0; i < restaurants.length; i++) {
+        if (stopped) break
+
+        const r = restaurants[i]
+        const { match, error, allResults } = await searchPlace(search, r, span)
+
+        if (!match) {
+          results.unresolved++
+          log(`[${i + 1}/${restaurants.length}] ✗ ${r.name} — ${error}`)
+          r.mapkitPlaceId = null
+        } else {
+          const placeId = extractPlaceId(match.place)
+
+          // Log first result's full properties for discovery
+          if (!loggedSchema) {
+            log('--- First search result properties ---')
+            const props = Object.getOwnPropertyNames(match.place)
+            for (const p of props) {
+              try {
+                const val = match.place[p]
+                if (typeof val !== 'function') {
+                  log(`  ${p}: ${JSON.stringify(val)}`)
+                }
+              } catch (e) {
+                log(`  ${p}: [error reading]`)
+              }
+            }
+            // Also check prototype properties
+            const proto = Object.getPrototypeOf(match.place)
+            if (proto) {
+              const protoProps = Object.getOwnPropertyNames(proto).filter(
+                (p) => p !== 'constructor' && !props.includes(p)
+              )
+              if (protoProps.length > 0) {
+                log('  [prototype]: ' + protoProps.join(', '))
+              }
+            }
+            log('---\n')
+            loggedSchema = true
+          }
+
+          if (placeId) {
+            results.resolved++
+            r.mapkitPlaceId = placeId
+          } else {
+            results.unresolved++
+            r.mapkitPlaceId = null
+            log(`[${i + 1}/${restaurants.length}] ⚠ ${r.name} — matched "${match.place.name}" but no place ID found`)
+            continue
+          }
+
+          results[match.confidence + 'Conf']++
+
+          const confEmoji = match.confidence === 'high' ? '✓' : match.confidence === 'medium' ? '~' : '?'
+          log(`[${i + 1}/${restaurants.length}] ${confEmoji} ${r.name} → "${match.place.name}" (${match.distance}m, sim:${match.nameSimilarity.toFixed(2)}, conf:${match.confidence})`)
+        }
+
+        // Rate limit: 200ms between requests
+        if (i < restaurants.length - 1) {
+          await delay(200)
+        }
+      }
+
+      // Show stats
+      const statsEl = $('#stats')
+      statsEl.classList.remove('hidden')
+      statsEl.innerHTML = `
+        <span class="stat stat-good">Resolved: ${results.resolved}/${restaurants.length}</span>
+        <span class="stat stat-good">High: ${results.highConf}</span>
+        <span class="stat stat-warn">Medium: ${results.medConf}</span>
+        <span class="stat stat-bad">Low: ${results.lowConf}</span>
+        <span class="stat stat-bad">Unresolved: ${results.unresolved}</span>
+      `
+
+      log(`\nDone. ${results.resolved}/${restaurants.length} resolved.`)
+      log(`  High confidence: ${results.highConf}`)
+      log(`  Medium confidence: ${results.medConf}`)
+      log(`  Low confidence: ${results.lowConf}`)
+      log(`  Unresolved: ${results.unresolved}`)
+
+      // Prepare download
+      const updatedData = { ...data, restaurants }
+      const blob = new Blob([JSON.stringify(updatedData, null, 2) + '\n'], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+
+      const downloadSection = $('#downloadSection')
+      downloadSection.classList.remove('hidden')
+      $('#downloadBtn').onclick = () => {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'restaurants.json'
+        a.click()
+      }
+
+      $('#startBtn').disabled = false
+      $('#stopBtn').classList.add('hidden')
+    })
+  </script>
+</body>
+</html>
