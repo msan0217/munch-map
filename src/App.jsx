@@ -21,7 +21,7 @@ function App() {
   }
 
   return (
-    <div className="relative w-screen h-screen flex flex-col md:flex-row overflow-hidden">
+    <div className="relative w-screen h-[100dvh] flex flex-col md:flex-row overflow-hidden">
       {/* Mobile top bar */}
       <div
         className="md:hidden bg-gray-900 text-white px-4 py-3 flex items-center justify-between cursor-pointer shrink-0 z-20"

@@ -189,7 +189,7 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
         cameraZoomRange: new mapkit.CameraZoomRange(0, AUSTIN_RADIUS_KM * 1000 * 3),
       })
 
-      map.padding = new mapkit.Padding({ top: 16, right: 16, bottom: 32, left: 16 })
+      map.padding = new mapkit.Padding({ top: 16, right: 16, bottom: 48, left: 16 })
 
       // Native cluster styling — modify the MarkerAnnotation in-place
       map.annotationForCluster = (clusterAnnotation) => {

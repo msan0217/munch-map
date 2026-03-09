@@ -31,7 +31,7 @@ export default function MapLegend({ layers = {} }) {
   if (visibleItems.length === 0) return null
 
   return (
-    <div className="absolute bottom-4 left-4 z-10 bg-white/90 backdrop-blur-md rounded-xl shadow-lg px-3 py-2.5 flex flex-col gap-1 pointer-events-auto">
+    <div className="absolute bottom-10 left-4 z-10 bg-white/90 backdrop-blur-md rounded-xl shadow-lg px-3 py-2.5 flex flex-col gap-1 pointer-events-auto">
       {visibleItems.map((item) => (
         <div key={item.label} className="flex items-center gap-1.5">
           <PinIcon color={item.color} glyph={item.glyph} />
