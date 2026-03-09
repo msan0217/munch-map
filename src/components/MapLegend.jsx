@@ -56,7 +56,7 @@ export default function MapLegend({ layers = {} }) {
   if (visibleItems.length === 0) return null
 
   return (
-    <div className="absolute bottom-10 left-4 z-10 bg-white/90 backdrop-blur-md rounded-xl shadow-lg overflow-hidden pointer-events-auto">
+    <div className="absolute bottom-[60px] left-4 z-10 bg-white/90 backdrop-blur-md rounded-xl shadow-lg overflow-hidden pointer-events-auto">
       <button
         onClick={() => setCollapsed((c) => !c)}
         className="flex items-center gap-1.5 px-3 py-2 w-full text-left"
