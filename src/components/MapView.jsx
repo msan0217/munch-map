@@ -27,7 +27,19 @@ function dualGlyphImage(michelinGlyph) {
   DUAL_GLYPH_CACHE[michelinGlyph] = img
   return img
 }
-
+function austinCameraBoundary(mapkit) {
+  // Use 3x the data radius so users can freely zoom into edge markers
+  // without being pushed back, while still preventing panning to other cities.
+  const boundaryKm = AUSTIN_RADIUS_KM * 3
+  const kmPerDegreeLat = 111.32
+  const kmPerDegreeLng = 111.32 * Math.cos((AUSTIN_CENTER.lat * Math.PI) / 180)
+  const latSpan = (boundaryKm / kmPerDegreeLat) * 2
+  const lngSpan = (boundaryKm / kmPerDegreeLng) * 2
+  return new mapkit.CoordinateRegion(
+    new mapkit.Coordinate(AUSTIN_CENTER.lat, AUSTIN_CENTER.lng),
+    new mapkit.CoordinateSpan(latSpan, lngSpan)
+  )
+}
 
 function zoomToSpan(zoom) {
   return 360 / Math.pow(2, zoom)
@@ -175,6 +187,7 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
         isScrollEnabled: true,
         isZoomEnabled: true,
         isRotationEnabled: false,
+        cameraBoundary: austinCameraBoundary(mapkit),
         cameraZoomRange: new mapkit.CameraZoomRange(0, AUSTIN_RADIUS_KM * 1000 * 3),
       })
 
