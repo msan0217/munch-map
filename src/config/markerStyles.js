@@ -1,5 +1,5 @@
 export const COLORS = {
-  google: '#3fdf33ff',
+  google: '#4285F4',
   michelinStar: '#D4A017',
   michelinBib: '#E8711A',
   michelinSelected: '#E8711A',
@@ -7,7 +7,7 @@ export const COLORS = {
 }
 
 export const GOOGLE_GLYPH = 'g'
-export const DUAL_GLYPH = ''
+export const DUAL_GLYPH = '+'
 
 export const MICHELIN_STYLES = {
   '1 Star':      { color: COLORS.michelinStar,     glyph: 'm★',   label: '1 Star' },

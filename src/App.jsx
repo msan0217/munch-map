@@ -21,13 +21,17 @@ function App() {
   }
 
   return (
-    <div className="relative w-screen h-screen flex flex-col md:flex-row overflow-hidden">
+    <div className="relative w-screen h-[100dvh] flex flex-col md:flex-row overflow-hidden">
       {/* Mobile top bar */}
       <div
         className="md:hidden bg-gray-900 text-white px-4 py-3 flex items-center justify-between cursor-pointer shrink-0 z-20"
         onClick={() => setMobileMenuOpen(true)}
       >
-        <span className="text-xl leading-none">☰</span>
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+            <rect x="2" y="4" width="18" height="2" rx="1" fill="currentColor" />
+            <rect x="2" y="10" width="18" height="2" rx="1" fill="currentColor" />
+            <rect x="2" y="16" width="18" height="2" rx="1" fill="currentColor" />
+          </svg>
         <div className="flex items-center gap-2">
           <img src={monchLogo} alt="MunchMap logo" className="w-6 h-6 rounded-full object-cover object-top" />
           <span className="text-base font-bold tracking-tight">MunchMap</span>
