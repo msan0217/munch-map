@@ -65,7 +65,7 @@ export default function Sidebar({ onClose, layers, onToggleLayer }) {
         <LayerToggle
           label="Google Top-Rated"
           sublabel="4.5+ stars, 100+ reviews"
-          color="#FF6B6B"
+          color="#4285F4"
           glyph="🍴"
           enabled={layers.google}
           onChange={(v) => onToggleLayer('google', v)}
