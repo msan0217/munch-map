@@ -27,41 +27,6 @@ function dualGlyphImage(michelinGlyph) {
   DUAL_GLYPH_CACHE[michelinGlyph] = img
   return img
 }
-function addQueryZoneOverlay(mapkit, map) {
-  const N = 128
-  const kmPerDegreeLat = 111.32
-  const kmPerDegreeLng = 111.32 * Math.cos((AUSTIN_CENTER.lat * Math.PI) / 180)
-  const latR = AUSTIN_RADIUS_KM / kmPerDegreeLat
-  const lngR = AUSTIN_RADIUS_KM / kmPerDegreeLng
-
-  // Outer rectangle: wound clockwise, covers entire visible map
-  const outer = [
-    new mapkit.Coordinate(85, -179.9),
-    new mapkit.Coordinate(85,  179.9),
-    new mapkit.Coordinate(-85, 179.9),
-    new mapkit.Coordinate(-85, -179.9),
-  ]
-
-  // Inner circle: wound counter-clockwise → evenodd rule punches a hole
-  const inner = Array.from({ length: N }, (_, i) => {
-    const angle = (2 * Math.PI * i) / N
-    return new mapkit.Coordinate(
-      AUSTIN_CENTER.lat + latR * Math.sin(angle),
-      AUSTIN_CENTER.lng + lngR * Math.cos(angle)
-    )
-  }).reverse()
-
-  const overlay = new mapkit.PolygonOverlay([outer, inner], {
-    style: new mapkit.Style({
-      fillColor: '#000000',
-      fillOpacity: 0.25,
-      lineWidth: 0,
-      strokeOpacity: 0,
-    }),
-  })
-
-  map.addOverlay(overlay)
-}
 
 function austinCameraBoundary(mapkit) {
   // Use 3x the data radius so users can freely zoom into edge markers
@@ -262,8 +227,6 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
         clusterAnnotation.displayPriority = 750
         return clusterAnnotation
       }
-
-      addQueryZoneOverlay(mapkit, map)
 
       mapInstanceRef.current = map
       setMapReady(true)
