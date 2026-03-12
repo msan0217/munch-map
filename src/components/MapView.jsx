@@ -27,6 +27,7 @@ function dualGlyphImage(michelinGlyph) {
   DUAL_GLYPH_CACHE[michelinGlyph] = img
   return img
 }
+
 function addQueryZoneOverlay(mapkit, map) {
   const N = 128
   const kmPerDegreeLat = 111.32
@@ -34,7 +35,7 @@ function addQueryZoneOverlay(mapkit, map) {
   const latR = AUSTIN_RADIUS_KM / kmPerDegreeLat
   const lngR = AUSTIN_RADIUS_KM / kmPerDegreeLng
 
-  // Outer rectangle: wound clockwise, covers entire visible map
+  // Outer rectangle wound clockwise (NW→NE→SE→SW) = winding −1
   const outer = [
     new mapkit.Coordinate(85, -179.9),
     new mapkit.Coordinate(85,  179.9),
@@ -42,14 +43,15 @@ function addQueryZoneOverlay(mapkit, map) {
     new mapkit.Coordinate(-85, -179.9),
   ]
 
-  // Inner circle: wound counter-clockwise → evenodd rule punches a hole
+  // Inner circle wound counter-clockwise (E→N→W→S) = winding +1
+  // With nonzero rule: outer(−1) + inner(+1) = 0 inside circle → hole
   const inner = Array.from({ length: N }, (_, i) => {
     const angle = (2 * Math.PI * i) / N
     return new mapkit.Coordinate(
       AUSTIN_CENTER.lat + latR * Math.sin(angle),
       AUSTIN_CENTER.lng + lngR * Math.cos(angle)
     )
-  }).reverse()
+  }) // no .reverse() — CCW winding cancels the CW outer rect
 
   const overlay = new mapkit.PolygonOverlay([outer, inner], {
     style: new mapkit.Style({
