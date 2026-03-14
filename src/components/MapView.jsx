@@ -70,18 +70,21 @@ function computeCoverageBoundary(mapkit) {
     rawDistances[i] = lo
   }
 
-  // Step 2: Smooth with a moving-max then moving-average to remove sharp notches
-  // while preserving the organic bumps from the grid shape.
-  // Moving-max (window=3) fills narrow notches, then moving-avg (window=5) smooths.
+  // Step 2: Smooth to remove hex-grid artifacts while preserving overall shape.
+  // Moving-max (window=5) fills notches, then wide moving-avg (window=15) rounds bumps
+  // into gentle undulations instead of visible hex-grid bulges.
+  const MAX_WINDOW = 5
+  const maxHalf = Math.floor(MAX_WINDOW / 2)
   const maxed = new Float64Array(N)
   for (let i = 0; i < N; i++) {
-    const prev = rawDistances[(i - 1 + N) % N]
-    const curr = rawDistances[i]
-    const next = rawDistances[(i + 1) % N]
-    maxed[i] = Math.max(prev, curr, next)
+    let m = 0
+    for (let j = -maxHalf; j <= maxHalf; j++) {
+      m = Math.max(m, rawDistances[(i + j + N) % N])
+    }
+    maxed[i] = m
   }
 
-  const SMOOTH_WINDOW = 5
+  const SMOOTH_WINDOW = 15
   const half = Math.floor(SMOOTH_WINDOW / 2)
   const smoothed = new Float64Array(N)
   for (let i = 0; i < N; i++) {
@@ -118,20 +121,19 @@ function addQueryZoneOverlay(mapkit, map) {
   const dimOverlay = new mapkit.PolygonOverlay([outer, boundary], {
     style: new mapkit.Style({
       fillColor: '#1a1a2e',
-      fillOpacity: 0.18,
+      fillOpacity: 0.15,
       lineWidth: 0,
       strokeOpacity: 0,
     }),
   })
 
-  // Dashed boundary stroke
+  // Solid boundary stroke — thin and subtle, avoids accentuating micro-geometry
   const borderOverlay = new mapkit.PolygonOverlay([boundary], {
     style: new mapkit.Style({
       fillOpacity: 0,
-      strokeColor: '#64748b',
-      strokeOpacity: 0.5,
-      lineWidth: 1.5,
-      lineDash: [8, 6],
+      strokeColor: '#475569',
+      strokeOpacity: 0.35,
+      lineWidth: 1,
     }),
   })
 
