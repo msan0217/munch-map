@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AUSTIN_CENTER, AUSTIN_RADIUS_KM } from '../config/austin.js'
+import { AUSTIN_CENTER, AUSTIN_RADIUS_KM, SEARCH_RADIUS_KM, GRID_SPACING_KM, generateGridPoints } from '../config/austin.js'
 import { COLORS, GOOGLE_GLYPH, MICHELIN_STYLES } from '../config/markerStyles.js'
 
 const MAPKIT_TOKEN = import.meta.env.VITE_MAPKIT_TOKEN
@@ -28,12 +28,83 @@ function dualGlyphImage(michelinGlyph) {
   return img
 }
 
-function addQueryZoneOverlay(mapkit, map) {
-  const N = 128
+// Compute the true coverage boundary — union of 5km circles at each hex grid point.
+// For each angle from center, ray-march to find the farthest point still within
+// SEARCH_RADIUS_KM of at least one grid point, then smooth to remove micro-notches.
+function computeCoverageBoundary(mapkit) {
+  const gridPoints = generateGridPoints(AUSTIN_CENTER, AUSTIN_RADIUS_KM, GRID_SPACING_KM)
   const kmPerDegreeLat = 111.32
   const kmPerDegreeLng = 111.32 * Math.cos((AUSTIN_CENTER.lat * Math.PI) / 180)
-  const latR = AUSTIN_RADIUS_KM / kmPerDegreeLat
-  const lngR = AUSTIN_RADIUS_KM / kmPerDegreeLng
+  const rSq = SEARCH_RADIUS_KM * SEARCH_RADIUS_KM
+
+  // Step 1: Ray-cast to find raw boundary distances
+  const N = 360
+  const rawDistances = new Float64Array(N)
+
+  for (let i = 0; i < N; i++) {
+    const angle = (2 * Math.PI * i) / N
+    const sinA = Math.sin(angle)
+    const cosA = Math.cos(angle)
+
+    let lo = 0
+    let hi = AUSTIN_RADIUS_KM + SEARCH_RADIUS_KM + 1
+    for (let iter = 0; iter < 20; iter++) {
+      const mid = (lo + hi) / 2
+      const testLat = AUSTIN_CENTER.lat + (mid * sinA) / kmPerDegreeLat
+      const testLng = AUSTIN_CENTER.lng + (mid * cosA) / kmPerDegreeLng
+
+      let covered = false
+      for (const gp of gridPoints) {
+        const dLat = (testLat - gp.lat) * kmPerDegreeLat
+        const dLng = (testLng - gp.lng) * kmPerDegreeLng
+        if (dLat * dLat + dLng * dLng <= rSq) {
+          covered = true
+          break
+        }
+      }
+
+      if (covered) lo = mid
+      else hi = mid
+    }
+
+    rawDistances[i] = lo
+  }
+
+  // Step 2: Smooth with a moving-max then moving-average to remove sharp notches
+  // while preserving the organic bumps from the grid shape.
+  // Moving-max (window=3) fills narrow notches, then moving-avg (window=5) smooths.
+  const maxed = new Float64Array(N)
+  for (let i = 0; i < N; i++) {
+    const prev = rawDistances[(i - 1 + N) % N]
+    const curr = rawDistances[i]
+    const next = rawDistances[(i + 1) % N]
+    maxed[i] = Math.max(prev, curr, next)
+  }
+
+  const SMOOTH_WINDOW = 5
+  const half = Math.floor(SMOOTH_WINDOW / 2)
+  const smoothed = new Float64Array(N)
+  for (let i = 0; i < N; i++) {
+    let sum = 0
+    for (let j = -half; j <= half; j++) {
+      sum += maxed[(i + j + N) % N]
+    }
+    smoothed[i] = sum / SMOOTH_WINDOW
+  }
+
+  // Step 3: Convert to MapKit coordinates
+  return Array.from({ length: N }, (_, i) => {
+    const angle = (2 * Math.PI * i) / N
+    const r = smoothed[i]
+    return new mapkit.Coordinate(
+      AUSTIN_CENTER.lat + (r * Math.sin(angle)) / kmPerDegreeLat,
+      AUSTIN_CENTER.lng + (r * Math.cos(angle)) / kmPerDegreeLng
+    )
+  })
+}
+
+function addQueryZoneOverlay(mapkit, map) {
+  const boundary = computeCoverageBoundary(mapkit)
 
   // Outer rectangle wound clockwise (NW→NE→SE→SW) = winding −1
   const outer = [
@@ -43,26 +114,28 @@ function addQueryZoneOverlay(mapkit, map) {
     new mapkit.Coordinate(-85, -179.9),
   ]
 
-  // Inner circle wound counter-clockwise (E→N→W→S) = winding +1
-  // With nonzero rule: outer(−1) + inner(+1) = 0 inside circle → hole
-  const inner = Array.from({ length: N }, (_, i) => {
-    const angle = (2 * Math.PI * i) / N
-    return new mapkit.Coordinate(
-      AUSTIN_CENTER.lat + latR * Math.sin(angle),
-      AUSTIN_CENTER.lng + lngR * Math.cos(angle)
-    )
-  }) // no .reverse() — CCW winding cancels the CW outer rect
-
-  const overlay = new mapkit.PolygonOverlay([outer, inner], {
+  // Main dimming overlay outside the boundary
+  const dimOverlay = new mapkit.PolygonOverlay([outer, boundary], {
     style: new mapkit.Style({
-      fillColor: '#000000',
-      fillOpacity: 0.25,
+      fillColor: '#1a1a2e',
+      fillOpacity: 0.18,
       lineWidth: 0,
       strokeOpacity: 0,
     }),
   })
 
-  map.addOverlay(overlay)
+  // Dashed boundary stroke
+  const borderOverlay = new mapkit.PolygonOverlay([boundary], {
+    style: new mapkit.Style({
+      fillOpacity: 0,
+      strokeColor: '#64748b',
+      strokeOpacity: 0.5,
+      lineWidth: 1.5,
+      lineDash: [8, 6],
+    }),
+  })
+
+  map.addOverlays([dimOverlay, borderOverlay])
 }
 
 function austinCameraBoundary(mapkit) {

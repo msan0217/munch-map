@@ -1,4 +1,4 @@
-import { AUSTIN_CENTER, AUSTIN_RADIUS_KM } from '../config/austin.js'
+import { isInCoverageArea } from '../config/austin.js'
 
 // Haversine distance in km between two lat/lng points
 function haversineKm(lat1, lng1, lat2, lng2) {
@@ -26,18 +26,15 @@ function normalizeName(name) {
  * Each entry has: { google, michelin, sources: ['google'|'michelin'], latitude, longitude }
  */
 export function mergeRestaurants(googleList, michelinList) {
-  // Filter Michelin to only Austin-area restaurants
-  const filteredMichelin = michelinList.filter(
-    (r) =>
-      haversineKm(AUSTIN_CENTER.lat, AUSTIN_CENTER.lng, r.latitude, r.longitude) <
-      AUSTIN_RADIUS_KM
-  )
+  // Filter both datasets to the actual Google search coverage area
+  const filteredGoogle = googleList.filter((r) => isInCoverageArea(r.latitude, r.longitude))
+  const filteredMichelin = michelinList.filter((r) => isInCoverageArea(r.latitude, r.longitude))
 
   const merged = []
   const matchedMichelinIds = new Set()
 
   // Start with Google restaurants, try to find Michelin matches
-  for (const g of googleList) {
+  for (const g of filteredGoogle) {
     const gNorm = normalizeName(g.name)
     let match = null
 

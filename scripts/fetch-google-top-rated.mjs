@@ -8,7 +8,7 @@
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'
-import { AUSTIN_CENTER, AUSTIN_RADIUS_KM } from '../src/config/austin.js'
+import { AUSTIN_CENTER, AUSTIN_RADIUS_KM, SEARCH_RADIUS_KM, GRID_SPACING_KM, generateGridPoints } from '../src/config/austin.js'
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY
 if (!API_KEY) {
@@ -19,8 +19,7 @@ if (!API_KEY) {
 // Austin center and search parameters
 const CENTER = AUSTIN_CENTER
 const COVERAGE_RADIUS_KM = AUSTIN_RADIUS_KM
-const SEARCH_RADIUS_M = 5000
-const GRID_SPACING_KM = 5
+const SEARCH_RADIUS_M = SEARCH_RADIUS_KM * 1000
 const MIN_RATING = 4.5
 const MIN_REVIEWS = 100
 const REQUEST_DELAY_MS = 150
@@ -55,36 +54,6 @@ const FIELD_MASK = [
   'places.websiteUri',
   'nextPageToken',
 ].join(',')
-
-function generateGridPoints(center, radiusKm, spacingKm) {
-  const points = []
-  const kmPerDegreeLat = 111.32
-  const kmPerDegreeLng = 111.32 * Math.cos((center.lat * Math.PI) / 180)
-
-  const rowSpacing = spacingKm * (Math.sqrt(3) / 2)
-  const maxRows = Math.ceil(radiusKm / rowSpacing)
-  const maxCols = Math.ceil(radiusKm / spacingKm)
-
-  for (let row = -maxRows; row <= maxRows; row++) {
-    const latOffset = (row * rowSpacing) / kmPerDegreeLat
-    const lat = center.lat + latOffset
-
-    for (let col = -maxCols; col <= maxCols; col++) {
-      const colOffset = (col * spacingKm + (Math.abs(row) % 2 === 1 ? spacingKm / 2 : 0)) / kmPerDegreeLng
-      const lng = center.lng + colOffset
-
-      const distKm = Math.sqrt(
-        Math.pow((lat - center.lat) * kmPerDegreeLat, 2) +
-        Math.pow((lng - center.lng) * kmPerDegreeLng, 2)
-      )
-      if (distKm <= radiusKm) {
-        points.push({ lat, lng })
-      }
-    }
-  }
-
-  return points
-}
 
 async function textSearch(lat, lng, pageToken) {
   const body = {
