@@ -1,4 +1,5 @@
 import monchLogo from '../assets/monch.jpeg'
+import { MICHELIN_STYLES } from '../config/markerStyles.js'
 
 function LayerToggle({ label, sublabel, color, glyph, enabled, onChange }) {
   return (
@@ -39,7 +40,48 @@ function LayerToggle({ label, sublabel, color, glyph, enabled, onChange }) {
   )
 }
 
-export default function Sidebar({ onClose, layers, onToggleLayer }) {
+const MICHELIN_SUB_FILTERS = ['1 Star', 'Bib Gourmand', 'Selected']
+
+function SubFilterToggle({ label, color, glyph, enabled, onChange }) {
+  return (
+    <label className="flex items-center gap-2.5 pl-11 pr-3 py-1.5 rounded-md hover:bg-gray-800/50 transition-colors cursor-pointer select-none">
+      <div
+        className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 border transition-opacity"
+        style={{
+          borderColor: color,
+          background: enabled ? color + '22' : 'transparent',
+          color: color,
+          opacity: enabled ? 1 : 0.35,
+        }}
+      >
+        {glyph}
+      </div>
+      <span
+        className="flex-1 text-xs font-medium transition-opacity"
+        style={{ color: color, opacity: enabled ? 1 : 0.4 }}
+      >
+        {label}
+      </span>
+      <div
+        className="relative w-8 h-[18px] rounded-full transition-colors shrink-0"
+        style={{ background: enabled ? color : '#4B5563' }}
+      >
+        <div
+          className="absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all"
+          style={{ left: enabled ? '14px' : '2px' }}
+        />
+      </div>
+      <input
+        type="checkbox"
+        checked={enabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="sr-only"
+      />
+    </label>
+  )
+}
+
+export default function Sidebar({ onClose, layers, onToggleLayer, onToggleMichelinFilter }) {
   return (
     <aside className="w-full h-full bg-gray-900 text-white p-6 flex flex-col gap-4 overflow-y-auto">
       <div className="flex items-center justify-between">
@@ -78,6 +120,23 @@ export default function Sidebar({ onClose, layers, onToggleLayer }) {
           enabled={layers.michelin}
           onChange={(v) => onToggleLayer('michelin', v)}
         />
+        {layers.michelin && (
+          <div className="flex flex-col gap-0.5">
+            {MICHELIN_SUB_FILTERS.map((distinction) => {
+              const style = MICHELIN_STYLES[distinction]
+              return (
+                <SubFilterToggle
+                  key={distinction}
+                  label={style.label}
+                  color={style.color}
+                  glyph={style.glyph}
+                  enabled={layers.michelinFilters[distinction]}
+                  onChange={(v) => onToggleMichelinFilter(distinction, v)}
+                />
+              )
+            })}
+          </div>
+        )}
       </div>
 
       <div className="mt-auto text-xs text-gray-500">

@@ -373,7 +373,7 @@ export default function MapView({ restaurants = [], layers = { google: true, mic
       const hasGoogle = item.sources.includes('google')
       const hasMichelin = item.sources.includes('michelin')
       const showGoogle = hasGoogle && layers.google
-      const showMichelin = hasMichelin && layers.michelin
+      const showMichelin = hasMichelin && layers.michelin && layers.michelinFilters?.[item.michelin?.distinction] !== false
 
       if (!showGoogle && !showMichelin) continue
 

@@ -50,7 +50,8 @@ export default function MapLegend({ layers = {} }) {
   )
 
   const visibleItems = LEGEND_ITEMS.filter((item) =>
-    item.sources.every((source) => layers[source])
+    item.sources.every((source) => layers[source]) &&
+    (!item.distinction || layers.michelinFilters?.[item.distinction] !== false)
   )
 
   if (visibleItems.length === 0) return null

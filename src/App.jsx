@@ -9,7 +9,11 @@ import monchLogo from './assets/monch.jpeg'
 
 function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [layers, setLayers] = useState({ google: true, michelin: true })
+  const [layers, setLayers] = useState({
+    google: true,
+    michelin: true,
+    michelinFilters: { '1 Star': true, 'Bib Gourmand': true, 'Selected': true },
+  })
 
   const merged = useMemo(
     () => mergeRestaurants(googleTopRated.restaurants, michelinData.restaurants),
@@ -18,6 +22,13 @@ function App() {
 
   function handleToggleLayer(layer, enabled) {
     setLayers((prev) => ({ ...prev, [layer]: enabled }))
+  }
+
+  function handleToggleMichelinFilter(distinction, enabled) {
+    setLayers((prev) => ({
+      ...prev,
+      michelinFilters: { ...prev.michelinFilters, [distinction]: enabled },
+    }))
   }
 
   return (
@@ -40,7 +51,7 @@ function App() {
 
       {/* Desktop sidebar */}
       <div className="hidden md:block w-1/5 min-w-[240px] max-w-[320px] shrink-0">
-        <Sidebar layers={layers} onToggleLayer={handleToggleLayer} />
+        <Sidebar layers={layers} onToggleLayer={handleToggleLayer} onToggleMichelinFilter={handleToggleMichelinFilter} />
       </div>
 
       {/* Map (single instance) */}
@@ -56,6 +67,7 @@ function App() {
             onClose={() => setMobileMenuOpen(false)}
             layers={layers}
             onToggleLayer={handleToggleLayer}
+            onToggleMichelinFilter={handleToggleMichelinFilter}
           />
         </div>
       )}
